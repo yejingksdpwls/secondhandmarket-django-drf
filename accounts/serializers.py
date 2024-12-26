@@ -47,3 +47,11 @@ class LoginSerializer(serializers.Serializer):
         # 인증된 사용자 반환
         data['user'] = user
         return data
+
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        User = get_user_model()
+        model = User
+        fields = ['username', 'email', 'first_name', 'last_name', 'nickname', 'bio']
