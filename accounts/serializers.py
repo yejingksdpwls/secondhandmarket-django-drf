@@ -1,6 +1,7 @@
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from rest_framework.validators import UniqueValidator
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -11,7 +12,15 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['username', 'password', 'email', 'first_name', 'last_name', 'nickname', 'birthday', 'gender', 'bio']
         extra_kwargs = {
             'email': {'required': True},
-            'username': {'required': True}
+            'username': {
+                'required': True,
+                'validators': [
+                    UniqueValidator(
+                        queryset=get_user_model().objects.all(),
+                        message="이미 사용 중인 사용자명입니다."
+                    )
+                ]
+            }
         }
 
     def validate(self, data):
@@ -19,7 +28,10 @@ class UserSerializer(serializers.ModelSerializer):
         model = get_user_model()
         if model.objects.filter(email=data['email']).exists():
             raise serializers.ValidationError("이미 사용중인 이메일입니다.")
+        if model.objects.filter(nickname=data['nickname']).exists():
+            raise serializers.ValidationError("이미 사용중인 닉네임입니다.")
         return data
+    
 
     def create(self, validated_data):
         model = get_user_model()
