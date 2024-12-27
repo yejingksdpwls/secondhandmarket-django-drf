@@ -34,6 +34,22 @@ class LoginAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 
+class LogoutAPIView(APIView):
+    def post(self, request):
+        if request.user.is_authenticated:
+            try:
+                refresh_token = request.data.get("refresh_token")
+                if not refresh_token:
+                    return Response({"error": "정상적으로 로그인이 되어있지 않습니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+                # Refresh 토큰을 무효화 (블랙리스트에 추가)
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+
+                return Response({"message": "로그아웃이 완료되었습니다."}, status=status.HTTP_205_RESET_CONTENT)
+            except Exception as e:
+                return Response({"error": "로그아웃에 실패했습니다."}, status=status.HTTP_400_BAD_REQUEST)
+
 
 class ProfileAPIView(APIView):
     def get(self, request, username):
@@ -47,3 +63,4 @@ class ProfileAPIView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response({"error":"로그인이 필요한 서비스입니다."}, status=status.HTTP_401_UNAUTHORIZED)
+        
