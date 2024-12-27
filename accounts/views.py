@@ -1,3 +1,6 @@
+from django.contrib.auth import authenticate
+from rest_framework.exceptions import ValidationError
+from django.contrib.auth.password_validation import validate_password
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -78,4 +81,34 @@ class ProfileAPIView(APIView):
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
-            return Response({"error":"로그인이 필요한 서비스입니다."}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({"error": "로그인이 필요한 서비스입니다."}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+class PasswordChangeAPIView(APIView):
+    def put(self, request):
+        if not request.user.is_authenticated:
+            return Response({"error": "로그인이 필요한 서비스입니다."}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # 요청 데이터
+        old_password = request.data.get("old_password")
+        new_password = request.data.get("new_password")
+
+        # 기존 패스워드 검증
+        if not request.user.check_password(old_password):
+            return Response({"error": "기존 패스워드가 올바르지 않습니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 새로운 패스워드와 기존 패스워드 비교
+        if old_password == new_password:
+            return Response({"error": "기존 패스워드와 동일한 패스워드로 변경할 수 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 새로운 패스워드 규칙 검증
+        try:
+            validate_password(new_password, user=request.user)
+        except ValidationError as e:
+            return Response({"error": e.messages}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 패스워드 업데이트
+        request.user.set_password(new_password)
+        request.user.save()
+
+        return Response({"message": "패스워드가 성공적으로 변경되었습니다."}, status=status.HTTP_200_OK)
