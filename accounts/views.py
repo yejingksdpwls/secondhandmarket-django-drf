@@ -60,7 +60,22 @@ class ProfileAPIView(APIView):
             except User.DoesNotExist:
                 return Response({"error": "해당 사용자를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
             serializer = UserProfileSerializer(user)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            if serializer.is_valid():
+                return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response({"error":"로그인이 필요한 서비스입니다."}, status=status.HTTP_401_UNAUTHORIZED)
-        
+    
+    def put(self, request, username):
+        if request.user.is_authenticated:
+            if request.user.username != username:
+                return Response({"error": "수정 권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
+            User = get_user_model()
+            user = User.objects.get(username=username)
+            serializer = UserProfileSerializer(user, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_205_RESET_CONTENT)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({"error":"로그인이 필요한 서비스입니다."}, status=status.HTTP_401_UNAUTHORIZED)
