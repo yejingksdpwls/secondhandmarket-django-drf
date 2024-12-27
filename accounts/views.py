@@ -9,14 +9,30 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
 
 
-class SignupAPIView(APIView):
+class AccountAPIView(APIView):
     def post(self, request):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response({"message": "회원가입이 완료되었습니다."}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request):
+        if not request.user.is_authenticated:
+            return Response({"error": "로그인이 필요한 서비스입니다."}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        # 요청 데이터
+        password = request.data.get("password")
 
+        if not password:
+            return Response({"error": "비밀번호를 입력해주세요."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 기존 패스워드 검증
+        if not request.user.check_password(password):
+            return Response({"error": "비밀번호가 일치하지 않습니다."}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            request.user.delete()
+            return Response({'message':"회원탈퇴가 완료되었습니다."}, status=status.HTTP_202_ACCEPTED)
 
 class LoginAPIView(APIView):
     def post(self, request):
